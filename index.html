@@ -107,17 +107,32 @@
             let screenWidth = Math.max(w, h);
             let screenHeight = Math.min(w, h);
 
-            document.getElementById('grp-dpad').style.left = (screenWidth * dpadPos.x) + "px";
-            document.getElementById('grp-dpad').style.top = (screenHeight * dpadPos.y) + "px";
+            // უსაფრთხოების ზონა ეკრანის კიდეებიდან (მინიმუმ 90 პიქსელი)
+            let safeMarginX = 90; 
+            let safeMarginY = 90;
 
-            document.getElementById('grp-action').style.left = (screenWidth * actionPos.x) + "px";
-            document.getElementById('grp-action').style.top = (screenHeight * actionPos.y) + "px";
+            // მარცხენა ღილაკები არასდროს მივა მარცხენა კიდესთან 90 პიქსელზე ახლოს
+            let leftX = Math.max(screenWidth * lPos.x, safeMarginX);
+            
+            // მარჯვენა ღილაკები არასდროს მივა მარჯვენა კიდესთან 90 პიქსელზე ახლოს
+            let rightX = Math.min(screenWidth * rPos.x, screenWidth - safeMarginX);
 
-            document.getElementById('grp-l').style.left = (screenWidth * lPos.x) + "px";
-            document.getElementById('grp-l').style.top = (screenHeight * lPos.y) + "px";
+            // ზედა და ქვედა პოზიციების დაზღვევა
+            let bottomY = Math.min(screenHeight * dpadPos.y, screenHeight - safeMarginY);
+            let topY = Math.max(screenHeight * lPos.y, safeMarginY);
 
-            document.getElementById('grp-r').style.left = (screenWidth * rPos.x) + "px";
-            document.getElementById('grp-r').style.top = (screenHeight * rPos.y) + "px";
+            // პოზიციების მინიჭება
+            document.getElementById('grp-dpad').style.left = leftX + "px";
+            document.getElementById('grp-dpad').style.top = bottomY + "px";
+
+            document.getElementById('grp-action').style.left = rightX + "px";
+            document.getElementById('grp-action').style.top = bottomY + "px";
+
+            document.getElementById('grp-l').style.left = leftX + "px";
+            document.getElementById('grp-l').style.top = topY + "px";
+
+            document.getElementById('grp-r').style.left = rightX + "px";
+            document.getElementById('grp-r').style.top = topY + "px";
         }
 
         // ეკრანის ზომის შეცვლისას (ან გადაბრუნებისას) ავტომატურად სწორდება ღილაკები
