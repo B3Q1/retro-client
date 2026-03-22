@@ -467,31 +467,48 @@
             handles.forEach(handle => {
                 handle.style.display = 'block';
                 const grp = document.getElementById(groups[handle.id]);
+                
+                // საწყისი პოზიციის ზუსტი სინქრონიზაცია ღილაკებთან
                 handle.style.left = grp.style.left;
                 handle.style.top = grp.style.top;
 
                 let isDragging = false;
+                
                 handle.onpointerdown = (e) => {
                     isDragging = true;
                     handle.setPointerCapture(e.pointerId);
                 };
+                
                 handle.onpointermove = (e) => {
                     if(!isDragging) return;
-                    let xPercent = (e.clientX / window.innerWidth);
-                    let yPercent = (e.clientY / window.innerHeight);
                     
-                    // ვანახლებთ JavaScript-ის ცვლადებს, რომ დამახსოვრებისას დარჩეს
+                    // ეკრანის ზომების გამოთვლა (ავტომატური Landscape მხარდაჭერით)
+                    let w = window.innerWidth;
+                    let h = window.innerHeight;
+                    let screenWidth = Math.max(w, h);
+                    let screenHeight = Math.min(w, h);
+                    
+                    let xPercent = e.clientX / screenWidth;
+                    let yPercent = e.clientY / screenHeight;
+                    
+                    // ვანახლებთ კოორდინატებს
                     if(handle.id === 'handle-dpad') dpadPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-action') actionPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-l') lPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-r') rPos = {x: xPercent, y: yPercent};
 
-                    applyAndroidLayout(); // რეალურ დროში ვანახლებთ
+                    // ვანახლებთ ღილაკების პოზიციას (აქ მუშაობს 90px დაცვის მექანიზმი)
+                    applyAndroidLayout(); 
                     
-                    handle.style.left = (e.clientX) + 'px';
-                    handle.style.top = (e.clientY) + 'px';
+                    // ლურჯ წერტილს ვსვამთ ზუსტად იქ, სადაც ღილაკების ცენტრი გაჩერდა
+                    handle.style.left = grp.style.left;
+                    handle.style.top = grp.style.top;
                 };
-                handle.onpointerup = (e) => { isDragging = false; handle.releasePointerCapture(e.pointerId); };
+                
+                handle.onpointerup = (e) => { 
+                    isDragging = false; 
+                    handle.releasePointerCapture(e.pointerId); 
+                };
             });
         }
 
