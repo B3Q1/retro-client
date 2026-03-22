@@ -237,24 +237,103 @@
             if (activeConnection && activeConnection.open) activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
         }
 
-        // --- Smart Touch Logic (Android-ის ანალოგიური თითის გასრიალება) ---
+        // --- Smart Touch Logic (Android 8-Way D-Pad + Buttons) ---
         const activeTouches = {};
         const controlsDiv = document.getElementById('controls');
+        const dpadGrp = document.getElementById('grp-dpad');
+
+        let currentDpadX = 0;
+        let currentDpadY = 0;
 
         function triggerBtnEl(el, isDown) {
-            if (!el || !el.dataset) return;
-            // ვიზუალური ეფექტი
+            if (!el || !el.dataset || !el.dataset.btn) return;
             if (isDown) el.classList.add('active');
             else el.classList.remove('active');
-
-            // სიგნალის გაგზავნა
-            if (el.dataset.btn) {
-                sendBtn(parseInt(el.dataset.btn), isDown);
-            } else if (el.dataset.axis) {
-                let parts = el.dataset.axis.split(',');
-                sendAxis(parseInt(parts[0]), isDown ? parseFloat(parts[1]) : 0);
-            }
+            sendBtn(parseInt(el.dataset.btn), isDown);
         }
+
+        // ჯვრის ღილაკების ვიზუალურად ანთება გასრიალებისას
+        function updateDpadVisuals(x, y) {
+            let rightBtn = document.querySelector('[data-axis="0,1"]');
+            let leftBtn = document.querySelector('[data-axis="0,-1"]');
+            let downBtn = document.querySelector('[data-axis="1,1"]');
+            let upBtn = document.querySelector('[data-axis="1,-1"]');
+            
+            if(rightBtn) rightBtn.classList.toggle('active', x === 1);
+            if(leftBtn) leftBtn.classList.toggle('active', x === -1);
+            if(downBtn) downBtn.classList.toggle('active', y === 1);
+            if(upBtn) upBtn.classList.toggle('active', y === -1);
+        }
+
+        function processTouches(e) {
+            if (isEditMode || !isControlsVisible) return;
+
+            // ვპოულობთ ჯვრის (D-Pad) ცენტრს ეკრანზე
+            let dpadRect = dpadGrp.getBoundingClientRect();
+            let dpadCenterX = dpadRect.left + dpadRect.width / 2;
+            let dpadCenterY = dpadRect.top + dpadRect.height / 2;
+            let dpadRadius = 120; // რადიუსი, სადაც თითი ჯოისტიკად აღიქმება
+
+            let newDpadX = 0;
+            let newDpadY = 0;
+            let currentTouchIds = [];
+
+            for (let i = 0; i < e.touches.length; i++) {
+                let t = e.touches[i];
+                let tx = t.clientX;
+                let ty = t.clientY;
+                currentTouchIds.push(t.identifier);
+
+                // 1. D-Pad-ის ლოგიკა (მანძილი ცენტრიდან)
+                let distToDpad = Math.hypot(tx - dpadCenterX, ty - dpadCenterY);
+                if (distToDpad < dpadRadius) {
+                    let deadzone = 25; // 25px ცენტრიდან არის მკვდარი ზონა (რომ ტყუილად არ დაეჭიროს)
+
+                    if (tx > dpadCenterX + deadzone) newDpadX = 1;      // მარჯვნივ
+                    else if (tx < dpadCenterX - deadzone) newDpadX = -1;// მარცხნივ
+
+                    if (ty > dpadCenterY + deadzone) newDpadY = 1;      // უკან (ქვემოთ)
+                    else if (ty < dpadCenterY - deadzone) newDpadY = -1;// წინ (ზემოთ)
+                } 
+                // 2. ჩვეულებრივი ღილაკების ლოგიკა (X, O, R1, L1 და ა.შ.)
+                else {
+                    let target = document.elementFromPoint(tx, ty);
+                    if (target && target.classList.contains('btn') && target.dataset.btn) {
+                        if (activeTouches[t.identifier] !== target) {
+                            if (activeTouches[t.identifier]) triggerBtnEl(activeTouches[t.identifier], false);
+                            triggerBtnEl(target, true);
+                            activeTouches[t.identifier] = target;
+                        }
+                    } else {
+                        if (activeTouches[t.identifier]) {
+                            triggerBtnEl(activeTouches[t.identifier], false);
+                            delete activeTouches[t.identifier];
+                        }
+                    }
+                }
+            }
+
+            // ვასუფთავებთ გაშვებულ ღილაკებს
+            for (let id in activeTouches) {
+                if (!currentTouchIds.includes(parseInt(id))) {
+                    triggerBtnEl(activeTouches[id], false);
+                    delete activeTouches[id];
+                }
+            }
+
+            // ვაგზავნით D-Pad-ის განახლებულ სიგნალს (თუ შეიცვალა)
+            if (newDpadX !== currentDpadX) { sendAxis(0, newDpadX); currentDpadX = newDpadX; }
+            if (newDpadY !== currentDpadY) { sendAxis(1, newDpadY); currentDpadY = newDpadY; }
+            
+            // ვანთებთ შესაბამის ღილაკებს დიაგონალებზე
+            updateDpadVisuals(currentDpadX, currentDpadY);
+        }
+
+        // ივენთების მიბმა
+        controlsDiv.addEventListener('touchstart', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
+        controlsDiv.addEventListener('touchmove', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
+        controlsDiv.addEventListener('touchend', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
+        controlsDiv.addEventListener('touchcancel', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
 
         function handleTouch(e) {
             if (isEditMode || !isControlsVisible) return;
