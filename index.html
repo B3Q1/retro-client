@@ -43,19 +43,23 @@
     <div id="overlay">
         <h2 id="statusText">უკავშირდება ჰოსტს...</h2>
         <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer; background:#1976D2; color:white; border:none; border-radius:8px;">▶ თამაშის დაწყება (სრული ეკრანი)</button>
-        <p style="margin-top:20px; color:#aaa; font-size:14px;">მხარდაჭერილია კლავიატურა და PC/TV ჯოისტიკი</p>
+        <p id="supportText" style="margin-top:20px; color:#aaa; font-size:14px;">მხარდაჭერილია კლავიატურა და PC/TV ჯოისტიკი</p>
     </div>
 
     <button id="settingsBtn">⚙</button>
     <button id="saveLayoutBtn">💾 დამახსოვრება</button>
 
     <div id="menu">
-        <h3 class="menu-title">პარამეტრები</h3>
-        <button class="menu-btn" onclick="toggleAspectRatio()">📺 ეკრანი: <span id="aspectText">16:9 (სრული)</span></button>
-        <button class="menu-btn" onclick="cycleSplitScreen()">✂️ გაჭრა: <span id="splitText">ნორმალური</span></button>
-        <button class="menu-btn" onclick="toggleEditMode()">✏️ ღილაკების გადატანა</button>
-        <button class="menu-btn" onclick="toggleControlsVisibility()">🎮 სენსორების დამალვა</button>
-        <button class="menu-btn" onclick="closeMenu()" style="background:#d32f2f;">❌ დახურვა</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0;" id="txtMenuTitle">პარამეტრები</h3>
+            <button id="langBtn" onclick="toggleLanguage()" style="background: #1976D2; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold;">🇬🇪 GEO</button>
+        </div>
+        
+        <button class="menu-btn" onclick="toggleAspectRatio()"><span id="txtAspect">📺 ეკრანი:</span> <span id="aspectText">16:9 (სრული)</span></button>
+        <button class="menu-btn" onclick="cycleSplitScreen()"><span id="txtSplit">✂️ გაჭრა:</span> <span id="splitText">ნორმალური</span></button>
+        <button class="menu-btn" id="txtEdit" onclick="toggleEditMode()">✏️ ღილაკების გადატანა</button>
+        <button class="menu-btn" id="txtControls" onclick="toggleControlsVisibility()">🎮 სენსორების დამალვა</button>
+        <button class="menu-btn" id="txtClose" onclick="closeMenu()" style="background:#d32f2f;">❌ დახურვა</button>
     </div>
 
     <div id="controls">
@@ -387,13 +391,56 @@
             requestAnimationFrame(pollGamepads);
         }
 
-        // --- UI & Settings Logic ---
+        // --- UI & Settings Logic & Language ---
+        let currentLang = 'GEO';
+        const langDict = {
+            'GEO': {
+                langBtn: '🇬🇪 GEO', menu: 'პარამეტრები', save: '💾 დამახსოვრება', start: '▶ თამაშის დაწყება (სრული ეკრანი)',
+                support: 'მხარდაჭერილია კლავიატურა და PC/TV ჯოისტიკი', aspect: '📺 ეკრანი:', aspectFull: '16:9 (სრული)',
+                aspectNative: '4:3 (ორიგინალი)', split: '✂️ გაჭრა:', splitNorm: 'ნორმალური', splitTop: 'ზედა (P1)',
+                splitBot: 'ქვედა (P2)', edit: '✏️ ღილაკების გადატანა', hide: '🎮 სენსორების დამალვა', show: '🎮 სენსორების ჩვენება',
+                close: '❌ დახურვა'
+            },
+            'ENG': {
+                langBtn: '🇺🇸 ENG', menu: 'Settings', save: '💾 Save Layout', start: '▶ Start Game (Fullscreen)',
+                support: 'Keyboard & Gamepad Supported', aspect: '📺 Screen:', aspectFull: '16:9 (Full)',
+                aspectNative: '4:3 (Native)', split: '✂️ Split:', splitNorm: 'Normal', splitTop: 'Top (P1)',
+                splitBot: 'Bottom (P2)', edit: '✏️ Edit Layout', hide: '🎮 Hide Controls', show: '🎮 Show Controls',
+                close: '❌ Close'
+            }
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'GEO' ? 'ENG' : 'GEO';
+            applyLanguage();
+        }
+
+        function applyLanguage() {
+            const l = langDict[currentLang];
+            document.getElementById('langBtn').innerText = l.langBtn;
+            document.getElementById('txtMenuTitle').innerText = l.menu;
+            document.getElementById('saveLayoutBtn').innerText = l.save;
+            document.getElementById('startBtn').innerText = l.start;
+            document.getElementById('supportText').innerText = l.support;
+            
+            document.getElementById('txtAspect').innerText = l.aspect;
+            document.getElementById('aspectText').innerText = isAspectRatio4To3 ? l.aspectNative : l.aspectFull;
+            
+            document.getElementById('txtSplit').innerText = l.split;
+            document.getElementById('splitText').innerText = splitMode === 'top' ? l.splitTop : (splitMode === 'bottom' ? l.splitBot : l.splitNorm);
+            
+            document.getElementById('txtEdit').innerText = l.edit;
+            document.getElementById('txtControls').innerText = isControlsVisible ? l.hide : l.show;
+            document.getElementById('txtClose').innerText = l.close;
+        }
+
         document.getElementById('settingsBtn').onclick = () => { document.getElementById('menu').style.display = 'block'; };
         function closeMenu() { document.getElementById('menu').style.display = 'none'; }
 
         function toggleControlsVisibility() {
             isControlsVisible = !isControlsVisible;
             document.querySelectorAll('.control-group').forEach(el => el.style.opacity = isControlsVisible ? '1' : '0');
+            document.getElementById('txtControls').innerText = isControlsVisible ? langDict[currentLang].hide : langDict[currentLang].show;
             closeMenu();
         }
 
@@ -434,7 +481,7 @@
 
         function toggleAspectRatio() {
             isAspectRatio4To3 = !isAspectRatio4To3;
-            document.getElementById('aspectText').innerText = isAspectRatio4To3 ? "4:3 (ორიგინალი)" : "16:9 (სრული)";
+            document.getElementById('aspectText').innerText = isAspectRatio4To3 ? langDict[currentLang].aspectNative : langDict[currentLang].aspectFull;
             applyVideoStyle();
         }
 
@@ -443,8 +490,7 @@
             else if(splitMode === 'top') splitMode = 'bottom';
             else splitMode = 'normal';
             
-            const txt = splitMode === 'top' ? 'ზედა (P1)' : (splitMode === 'bottom' ? 'ქვედა (P2)' : 'ნორმალური');
-            document.getElementById('splitText').innerText = txt;
+            document.getElementById('splitText').innerText = splitMode === 'top' ? langDict[currentLang].splitTop : (splitMode === 'bottom' ? langDict[currentLang].splitBot : langDict[currentLang].splitNorm);
             applyVideoStyle();
         }
 
