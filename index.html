@@ -15,15 +15,15 @@
         
         /* კონტროლერების ფენა */
         #controls { position: absolute; z-index: 10; width: 100vw; height: 100vh; pointer-events: none; }
-        .control-group { position: absolute; pointer-events: auto; }
+        .control-group { position: absolute; pointer-events: auto; transform: translate(-50%, -50%); }
         
-        /* ღილაკების დიზაინი (Android-ის ანალოგი) */
+        /* ღილაკების დიზაინი (Android-ის ანალოგი 53px ზომით) */
         .btn { position: absolute; width: 53px; height: 53px; background: rgba(80,80,80,0.8); border: 1px solid rgba(255,255,255,0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; color: #E0E0E0; transform: translate(-50%, -50%); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn:active, .btn.active { background: rgba(120,120,120,0.9); border-color: white; }
         .btn.small { font-size: 14px; }
         
         /* სეთინგების ღილაკი და მენიუ */
-        #settingsBtn { position: absolute; top: 20px; right: 20px; z-index: 20; width: 50px; height: 50px; background: rgba(50,50,50,0.6); border: none; border-radius: 10px; color: white; font-size: 24px; pointer-events: auto; cursor: pointer; }
+        #settingsBtn { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 20; width: 50px; height: 50px; background: rgba(50,50,50,0.6); border: none; border-radius: 10px; color: white; font-size: 24px; pointer-events: auto; cursor: pointer; }
         #menu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border-radius: 10px; z-index: 30; width: 300px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
         .menu-btn { width: 100%; padding: 12px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 16px; cursor: pointer; }
         .menu-btn:active { background: #555; }
@@ -42,7 +42,7 @@
     
     <div id="overlay">
         <h2 id="statusText">უკავშირდება ჰოსტს...</h2>
-        <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer; background:#1976D2; color:white; border:none; border-radius:8px;">▶ თამაშის დაწყება</button>
+        <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer; background:#1976D2; color:white; border:none; border-radius:8px;">▶ თამაშის დაწყება (სრული ეკრანი)</button>
         <p style="margin-top:20px; color:#aaa; font-size:14px;">მხარდაჭერილია კლავიატურა და PC/TV ჯოისტიკი</p>
     </div>
 
@@ -64,24 +64,26 @@
         <div class="drag-handle" id="handle-r"></div>
         <div class="drag-handle" id="handle-action"></div>
 
-        <div class="control-group" id="grp-l" style="left: 60px; top: 32%;">
-            <div class="btn small" style="top: -20px; left: 0;" onpointerdown="sendBtn(10, true)" onpointerup="sendBtn(10, false)" onpointerleave="sendBtn(10, false)">L1</div>
-            <div class="btn small" style="top: 0; left: -65px;" onpointerdown="sendBtn(12, true)" onpointerup="sendBtn(12, false)" onpointerleave="sendBtn(12, false)">L2</div>
-            <div class="btn small" style="top: 0; left: 65px;" onpointerdown="sendBtn(2, true)" onpointerup="sendBtn(2, false)" onpointerleave="sendBtn(2, false)">■</div> </div>
+        <div class="control-group" id="grp-l">
+            <div class="btn small" style="top: -25px; left: 0;" onpointerdown="sendBtn(10, true)" onpointerup="sendBtn(10, false)" onpointerleave="sendBtn(10, false)">L1</div>
+            <div class="btn small" style="top: 0; left: -55px;" onpointerdown="sendBtn(12, true)" onpointerup="sendBtn(12, false)" onpointerleave="sendBtn(12, false)">L2</div>
+            <div class="btn small" style="top: 0; left: 55px;" onpointerdown="sendBtn(2, true)" onpointerup="sendBtn(2, false)" onpointerleave="sendBtn(2, false)">■</div> 
+        </div>
 
-        <div class="control-group" id="grp-r" style="right: 60px; top: 32%;">
-            <div class="btn small" style="top: -20px; left: 0;" onpointerdown="sendBtn(11, true)" onpointerup="sendBtn(11, false)" onpointerleave="sendBtn(11, false)">R1</div>
-            <div class="btn small" style="top: 0; left: 65px;" onpointerdown="sendBtn(13, true)" onpointerup="sendBtn(13, false)" onpointerleave="sendBtn(13, false)">R2</div>
-            <div class="btn small" style="top: 0; left: -65px;" onpointerdown="sendBtn(3, true)" onpointerup="sendBtn(3, false)" onpointerleave="sendBtn(3, false)">▶</div> </div>
+        <div class="control-group" id="grp-r">
+            <div class="btn small" style="top: -25px; left: 0;" onpointerdown="sendBtn(11, true)" onpointerup="sendBtn(11, false)" onpointerleave="sendBtn(11, false)">R1</div>
+            <div class="btn small" style="top: 0; left: 55px;" onpointerdown="sendBtn(13, true)" onpointerup="sendBtn(13, false)" onpointerleave="sendBtn(13, false)">R2</div>
+            <div class="btn small" style="top: 0; left: -55px;" onpointerdown="sendBtn(3, true)" onpointerup="sendBtn(3, false)" onpointerleave="sendBtn(3, false)">▶</div> 
+        </div>
 
-        <div class="control-group" id="grp-dpad" style="left: 80px; bottom: 80px;">
+        <div class="control-group" id="grp-dpad">
             <div class="btn" style="top: -55px; left: 0;" onpointerdown="sendAxis(1, -1)" onpointerup="sendAxis(1, 0)" onpointerleave="sendAxis(1, 0)">▲</div>
             <div class="btn" style="top: 55px; left: 0;" onpointerdown="sendAxis(1, 1)" onpointerup="sendAxis(1, 0)" onpointerleave="sendAxis(1, 0)">▼</div>
             <div class="btn" style="top: 0; left: -55px;" onpointerdown="sendAxis(0, -1)" onpointerup="sendAxis(0, 0)" onpointerleave="sendAxis(0, 0)">◀</div>
             <div class="btn" style="top: 0; left: 55px;" onpointerdown="sendAxis(0, 1)" onpointerup="sendAxis(0, 0)" onpointerleave="sendAxis(0, 0)">▶</div>
         </div>
 
-        <div class="control-group" id="grp-action" style="right: 80px; bottom: 80px;">
+        <div class="control-group" id="grp-action">
             <div class="btn" style="top: -55px; left: 0;" onpointerdown="sendBtn(9, true)" onpointerup="sendBtn(9, false)" onpointerleave="sendBtn(9, false)">△</div>
             <div class="btn" style="top: 55px; left: 0;" onpointerdown="sendBtn(0, true)" onpointerup="sendBtn(0, false)" onpointerleave="sendBtn(0, false)">✕</div>
             <div class="btn" style="top: 0; left: -55px;" onpointerdown="sendBtn(1, true)" onpointerup="sendBtn(1, false)" onpointerleave="sendBtn(1, false)">□</div>
@@ -90,13 +92,45 @@
     </div>
 
     <script>
+        // --- Android Logic for Button Layout ---
+        // ზუსტად იგივე პოზიციები, რაც შენს GamePlayerFragment.kt-ში წერია
+        let dpadPos = { x: 0.13, y: 0.60 };
+        let actionPos = { x: 0.92, y: 0.60 };
+        let lPos = { x: 0.13, y: 0.32 };
+        let rPos = { x: 0.92, y: 0.32 };
+
+        function applyAndroidLayout() {
+            let w = window.innerWidth;
+            let h = window.innerHeight;
+            
+            // ვაფიქსირებთ, რომ სიგანე ყოველთვის სიგრძეზე მეტი იყოს (Landscape ლოგიკა)
+            let screenWidth = Math.max(w, h);
+            let screenHeight = Math.min(w, h);
+
+            document.getElementById('grp-dpad').style.left = (screenWidth * dpadPos.x) + "px";
+            document.getElementById('grp-dpad').style.top = (screenHeight * dpadPos.y) + "px";
+
+            document.getElementById('grp-action').style.left = (screenWidth * actionPos.x) + "px";
+            document.getElementById('grp-action').style.top = (screenHeight * actionPos.y) + "px";
+
+            document.getElementById('grp-l').style.left = (screenWidth * lPos.x) + "px";
+            document.getElementById('grp-l').style.top = (screenHeight * lPos.y) + "px";
+
+            document.getElementById('grp-r').style.left = (screenWidth * rPos.x) + "px";
+            document.getElementById('grp-r').style.top = (screenHeight * rPos.y) + "px";
+        }
+
+        // ეკრანის ზომის შეცვლისას (ან გადაბრუნებისას) ავტომატურად სწორდება ღილაკები
+        window.addEventListener('resize', applyAndroidLayout);
+        applyAndroidLayout();
+
         // --- PeerJS & Video Logic ---
         const urlParams = new URLSearchParams(window.location.search);
         const hostId = urlParams.get('id');
         let activeConnection = null;
         let isControlsVisible = true;
         let isAspectRatio4To3 = false;
-        let splitMode = 'normal'; // normal, top, bottom
+        let splitMode = 'normal'; 
         let isEditMode = false;
 
         if (!hostId) {
@@ -113,7 +147,7 @@
                     activeConnection = conn;
                     document.getElementById('statusText').innerText = "წარმატებით დაუკავშირდა!";
                     document.getElementById('startBtn').style.display = "block";
-                    startGamepadPolling(); // ვიწყებთ ჯოისტიკის სკანირებას
+                    startGamepadPolling(); 
                 });
 
                 conn.on('data', (data) => {
@@ -155,16 +189,29 @@
                 });
             });
 
-            document.getElementById('startBtn').addEventListener('click', () => {
-    // სრულ ეკრანზე გადაყვანის მოთხოვნა
-    let elem = document.documentElement;
-    if (elem.requestFullscreen) { elem.requestFullscreen(); }
-    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+            // --- Fullscreen და ავტომატური ჰორიზონტალური რეჟიმი ---
+            document.getElementById('startBtn').addEventListener('click', async () => {
+                let elem = document.documentElement;
+                try {
+                    // სრულ ეკრანზე გადასვლა
+                    if (elem.requestFullscreen) { await elem.requestFullscreen(); }
+                    else if (elem.webkitRequestFullscreen) { await elem.webkitRequestFullscreen(); }
 
-    document.getElementById('overlay').style.display = 'none';
-    document.getElementById('player').play();
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-});
+                    // ეკრანის ჰორიზონტალურად ჩაკეტვა (Landscape Lock)
+                    if (screen.orientation && screen.orientation.lock) {
+                        await screen.orientation.lock('landscape');
+                    }
+                } catch (err) {
+                    console.log("Landscape lock არ არის მხარდაჭერილი ამ ბრაუზერში, ან შეცდომაა:", err);
+                }
+
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('player').play();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                
+                // ეკრანის გადაბრუნების შემდეგ ღილაკების პოზიციებს ხელახლა ვასწორებთ
+                setTimeout(applyAndroidLayout, 500); 
+            });
         }
 
         // --- Input Logic (Touch, Keyboard, Gamepad) ---
@@ -175,20 +222,19 @@
             if (activeConnection && activeConnection.open) activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
         }
 
-        // Keyboard Map (WASD + JKLI + Shift/Ctrl/Enter/Space)
         const keyMap = {
             'KeyW': {type: 'axis', idx: 1, val: -1}, 'KeyS': {type: 'axis', idx: 1, val: 1},
             'KeyA': {type: 'axis', idx: 0, val: -1}, 'KeyD': {type: 'axis', idx: 0, val: 1},
-            'KeyK': {type: 'btn', idx: 0}, // Cross
-            'KeyJ': {type: 'btn', idx: 1}, // Square
-            'Space': {type: 'btn', idx: 2}, // Select
-            'Enter': {type: 'btn', idx: 3}, // Start
-            'KeyL': {type: 'btn', idx: 8}, // Circle
-            'KeyI': {type: 'btn', idx: 9}, // Triangle
-            'KeyQ': {type: 'btn', idx: 10}, // L1
-            'KeyE': {type: 'btn', idx: 11}, // R1
-            'Digit1': {type: 'btn', idx: 12}, // L2
-            'Digit3': {type: 'btn', idx: 13}  // R2
+            'KeyK': {type: 'btn', idx: 0}, 
+            'KeyJ': {type: 'btn', idx: 1}, 
+            'Space': {type: 'btn', idx: 2}, 
+            'Enter': {type: 'btn', idx: 3}, 
+            'KeyL': {type: 'btn', idx: 8}, 
+            'KeyI': {type: 'btn', idx: 9}, 
+            'KeyQ': {type: 'btn', idx: 10}, 
+            'KeyE': {type: 'btn', idx: 11}, 
+            'Digit1': {type: 'btn', idx: 12}, 
+            'Digit3': {type: 'btn', idx: 13}  
         };
 
         window.addEventListener('keydown', (e) => {
@@ -206,19 +252,13 @@
             }
         });
 
-        // Gamepad API Polling
         let prevPadState = {};
-        function startGamepadPolling() {
-            requestAnimationFrame(pollGamepads);
-        }
+        function startGamepadPolling() { requestAnimationFrame(pollGamepads); }
         function pollGamepads() {
             const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            const pad = gamepads[0]; // პირველი შეერთებული ჯოისტიკი
+            const pad = gamepads[0]; 
             if (pad && activeConnection && activeConnection.open) {
-                // ღილაკების მაპინგი სტანდარტულ HTML5 Gamepad-ზე (Xbox/PS)
-                const mapping = {
-                    0: 0, 1: 8, 2: 1, 3: 9, 4: 10, 5: 11, 6: 12, 7: 13, 8: 2, 9: 3
-                };
+                const mapping = { 0: 0, 1: 8, 2: 1, 3: 9, 4: 10, 5: 11, 6: 12, 7: 13, 8: 2, 9: 3 };
                 for (let i = 0; i <= 9; i++) {
                     let isPressed = pad.buttons[i].pressed;
                     if (prevPadState['b'+i] !== isPressed) {
@@ -226,7 +266,6 @@
                         prevPadState['b'+i] = isPressed;
                     }
                 }
-                // D-PAD აბსტრაქცია მარცხენა სტიკზე ან ჯვარედინ ღილაკებზე (12,13,14,15)
                 let dpadX = pad.buttons[15]?.pressed ? 1 : (pad.buttons[14]?.pressed ? -1 : 0);
                 if (Math.abs(pad.axes[0]) > 0.5) dpadX = pad.axes[0] > 0 ? 1 : -1;
                 
@@ -249,7 +288,6 @@
             closeMenu();
         }
 
-        // Android-ის ანალოგიური Aspect/Split Screen CSS
         function applyVideoStyle() {
             const video = document.getElementById('player');
             const fitMode = isAspectRatio4To3 ? 'contain' : 'fill';
@@ -326,12 +364,19 @@
                 };
                 handle.onpointermove = (e) => {
                     if(!isDragging) return;
-                    let xPercent = (e.clientX / window.innerWidth) * 100;
-                    let yPercent = (e.clientY / window.innerHeight) * 100;
-                    handle.style.left = xPercent + '%';
-                    handle.style.top = yPercent + '%';
-                    grp.style.left = xPercent + '%';
-                    grp.style.top = yPercent + '%';
+                    let xPercent = (e.clientX / window.innerWidth);
+                    let yPercent = (e.clientY / window.innerHeight);
+                    
+                    // ვანახლებთ JavaScript-ის ცვლადებს, რომ დამახსოვრებისას დარჩეს
+                    if(handle.id === 'handle-dpad') dpadPos = {x: xPercent, y: yPercent};
+                    if(handle.id === 'handle-action') actionPos = {x: xPercent, y: yPercent};
+                    if(handle.id === 'handle-l') lPos = {x: xPercent, y: yPercent};
+                    if(handle.id === 'handle-r') rPos = {x: xPercent, y: yPercent};
+
+                    applyAndroidLayout(); // რეალურ დროში ვანახლებთ
+                    
+                    handle.style.left = (e.clientX) + 'px';
+                    handle.style.top = (e.clientY) + 'px';
                 };
                 handle.onpointerup = (e) => { isDragging = false; handle.releasePointerCapture(e.pointerId); };
             });
@@ -344,7 +389,6 @@
             document.getElementById('settingsBtn').style.display = 'block';
         };
 
-        // გამორთე მარჯვენა წკაპი და გადიდება ტელეფონებზე
         document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
 </body>
