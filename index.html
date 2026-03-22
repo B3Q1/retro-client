@@ -335,50 +335,6 @@
         controlsDiv.addEventListener('touchend', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
         controlsDiv.addEventListener('touchcancel', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
 
-        function handleTouch(e) {
-            if (isEditMode || !isControlsVisible) return;
-            e.preventDefault(); // ეკრანის გაწელვას ბლოკავს
-
-            let currentActiveEls = new Set();
-
-            for (let i = 0; i < e.touches.length; i++) {
-                let t = e.touches[i];
-                // პოულობს იმ ღილაკს, რომელზეც ამწამს გიდევს თითი (გასრიალების დროსაც)
-                let target = document.elementFromPoint(t.clientX, t.clientY);
-
-                if (target && target.classList.contains('btn')) {
-                    currentActiveEls.add(target);
-                    // თუ ახალ ღილაკზე გადახვედი, ძველს უშვებს და ახალს აჭერს
-                    if (activeTouches[t.identifier] !== target) {
-                        if (activeTouches[t.identifier]) triggerBtnEl(activeTouches[t.identifier], false);
-                        triggerBtnEl(target, true);
-                        activeTouches[t.identifier] = target;
-                    }
-                } else {
-                    // თუ თითი ღილაკიდან ცარიელ ადგილას გაასრიალე
-                    if (activeTouches[t.identifier]) {
-                        triggerBtnEl(activeTouches[t.identifier], false);
-                        delete activeTouches[t.identifier];
-                    }
-                }
-            }
-        }
-
-        function handleTouchEnd(e) {
-            let currentTouchIds = Array.from(e.touches).map(t => t.identifier);
-            for (let id in activeTouches) {
-                if (!currentTouchIds.includes(parseInt(id))) {
-                    triggerBtnEl(activeTouches[id], false);
-                    delete activeTouches[id];
-                }
-            }
-        }
-
-        controlsDiv.addEventListener('touchstart', handleTouch, { passive: false });
-        controlsDiv.addEventListener('touchmove', handleTouch, { passive: false });
-        controlsDiv.addEventListener('touchend', handleTouchEnd);
-        controlsDiv.addEventListener('touchcancel', handleTouchEnd);
-
         const keyMap = {
             'KeyW': {type: 'axis', idx: 1, val: -1}, 'KeyS': {type: 'axis', idx: 1, val: 1},
             'KeyA': {type: 'axis', idx: 0, val: -1}, 'KeyD': {type: 'axis', idx: 0, val: 1},
