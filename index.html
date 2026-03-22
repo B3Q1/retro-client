@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RetroGames - Play Online</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jmuxer@2.0.5/dist/jmuxer.min.js"></script>
+    <style>
+        body { margin: 0; background: black; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
+        video { width: 100%; height: 100%; object-fit: contain; position: absolute; z-index: 1; }
+        #overlay { position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); width: 100%; height: 100%; }
+        #controls { position: absolute; z-index: 5; width: 100%; height: 100%; pointer-events: none; display: none; }
+        .btn-group { position: absolute; bottom: 10%; pointer-events: auto; }
+        .dpad { left: 5%; display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; }
+        .actions { right: 5%; display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; }
+        .btn { width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; user-select: none; }
+        .btn:active { background: rgba(255,255,255,0.5); }
+        /* მარტივი გრიდის განლაგება ღილაკებისთვის */
+        .up { grid-column: 2; grid-row: 1; } .down { grid-column: 2; grid-row: 3; } .left { grid-column: 1; grid-row: 2; } .right { grid-column: 3; grid-row: 2; }
+        .tri { grid-column: 2; grid-row: 1; } .cross { grid-column: 2; grid-row: 3; } .sq { grid-column: 1; grid-row: 2; } .circ { grid-column: 3; grid-row: 2; }
+    </style>
+</head>
+<body>
+
+    <video id="player" autoplay muted playsinline></video>
+    
+    <div id="overlay">
+        <h2 id="statusText">უკავშირდება ჰოსტს...</h2>
+        <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer;">თამაშის დაწყება</button>
+    </div>
+
+    <div id="controls">
+        <div class="btn-group dpad">
+            <div class="btn up" onpointerdown="sendAxis(1, -1)" onpointerup="sendAxis(1, 0)">▲</div>
+            <div class="btn down" onpointerdown="sendAxis(1, 1)" onpointerup="sendAxis(1, 0)">▼</div>
+            <div class="btn left" onpointerdown="sendAxis(0, -1)" onpointerup="sendAxis(0, 0)">◀</div>
+            <div class="btn right" onpointerdown="sendAxis(0, 1)" onpointerup="sendAxis(0, 0)">▶</div>
+        </div>
+        <div class="btn-group actions">
+            <div class="btn tri" onpointerdown="sendBtn(9, true)" onpointerup="sendBtn(9, false)">△</div>
+            <div class="btn cross" onpointerdown="sendBtn(0, true)" onpointerup="sendBtn(0, false)">✕</div>
+            <div class="btn sq" onpointerdown="sendBtn(1, true)" onpointerup="sendBtn(1, false)">□</div>
+            <div class="btn circ" onpointerdown="sendBtn(8, true)" onpointerup="sendBtn(8, false)">○</div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostId = urlParams.get('id');
+        const statusText = document.getElementById('statusText');
+        const startBtn = document.getElementById('startBtn');
+        const controls = document.getElementById('controls');
+        let activeConnection = null;
+
+        if (!hostId) {
+            statusText.innerText = "შეცდომა: ლინკში Host ID ვერ მოიძებნა.";
+        } else {
+            const peer = new Peer({ config: { 'iceServers': [ { urls: 'stun:stun.l.google.com:19302' } ] } });
+            let jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
+            
+            let audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
+            let nextAudioTime = 0;
+
+            peer.on('open', function() {
+                const conn = peer.connect(hostId, { reliable: true });
+                
+                conn.on('open', function() {
+                    activeConnection = conn;
+                    statusText.innerText = "წარმატებით დაუკავშირდა!";
+                    startBtn.style.display = "block"; // ველოდებით იუზერის დაჭერას, რომ ხმა/ვიდეო ჩაირთოს (ბრაუზერის წესია)
+                });
+
+                conn.on('data', function(data) {
+                    if (data.type === 'vid_reset') {
+                        jmuxer.destroy();
+                        jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
+                    }
+                    if (data.type === 'vid') {
+                        let binaryString = atob(data.data);
+                        let bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                        jmuxer.feed({ video: bytes });
+                    }
+                    if (data.type === 'aud') {
+                        if(audioCtx.state === 'suspended') return; // სანამ Start-ს არ დააჭერს, ხმას არ ვუშვებთ
+                        let binaryString = atob(data.data);
+                        let bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                        let int16 = new Int16Array(bytes.buffer);
+                        let float32 = new Float32Array(int16.length);
+                        for(let i=0; i<int16.length; i++) { float32[i] = int16[i] / 32768.0; }
+                        
+                        let audioBuffer = audioCtx.createBuffer(2, int16.length / 2, 44100);
+                        audioBuffer.getChannelData(0).set(float32.filter((_, i) => i % 2 === 0));
+                        audioBuffer.getChannelData(1).set(float32.filter((_, i) => i % 2 !== 0));
+                        
+                        let source = audioCtx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(audioCtx.destination);
+                        source.start(nextAudioTime);
+                        nextAudioTime += audioBuffer.duration;
+                    }
+                });
+            });
+
+            startBtn.addEventListener('click', () => {
+                document.getElementById('overlay').style.display = 'none';
+                controls.style.display = 'block';
+                document.getElementById('player').play();
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+            });
+        }
+
+        // ღილაკების სიგნალის გაგზავნა აპლიკაციაში (Player 2)
+        function sendBtn(index, isDown) {
+            if (activeConnection && activeConnection.open) {
+                activeConnection.send({player: 2, type: 'btn', index: index, isDown: isDown, val: 0.0});
+            }
+        }
+        function sendAxis(index, value) {
+            if (activeConnection && activeConnection.open) {
+                activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
+            }
+        }
+    </script>
+</body>
+</html>
