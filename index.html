@@ -1,24 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ka">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RetroGames - Play Online</title>
+    <title>RetroGames - Web Player</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jmuxer@2.0.5/dist/jmuxer.min.js"></script>
     <style>
-        body { margin: 0; background: black; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
-        video { width: 100%; height: 100%; object-fit: contain; position: absolute; z-index: 1; }
-        #overlay { position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); width: 100%; height: 100%; }
-        #controls { position: absolute; z-index: 5; width: 100%; height: 100%; pointer-events: none; display: none; }
-        .btn-group { position: absolute; bottom: 10%; pointer-events: auto; }
-        .dpad { left: 5%; display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; }
-        .actions { right: 5%; display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; }
-        .btn { width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; user-select: none; }
-        .btn:active { background: rgba(255,255,255,0.5); }
-        /* მარტივი გრიდის განლაგება ღილაკებისთვის */
+        body { margin: 0; background: black; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; touch-action: none; }
+        
+        /* ვიდეოს სტილები ეკრანის გაჭრისთვის */
+        video { width: 100%; height: 100%; position: absolute; z-index: 1; object-fit: fill; transform-origin: center center; }
+        
+        #overlay { position: absolute; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); width: 100%; height: 100%; }
+        
+        /* კონტროლერების მთავარი კონტეინერი */
+        #controls { position: absolute; z-index: 5; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* ჯგუფები, რომელთა გადაადგილებაც შეიძლება */
+        .control-group { position: absolute; pointer-events: auto; }
+        .dpad-group { left: 5%; bottom: 10%; display: grid; grid-template-columns: 60px 60px 60px; gap: 5px; }
+        .action-group { right: 5%; bottom: 10%; display: grid; grid-template-columns: 60px 60px 60px; gap: 5px; }
+        .shoulder-l-group { left: 5%; bottom: 45%; display: flex; gap: 10px; }
+        .shoulder-r-group { right: 5%; bottom: 45%; display: flex; gap: 10px; }
+        .system-group { left: 50%; transform: translateX(-50%); bottom: 5%; display: flex; gap: 20px; }
+        
+        /* ღილაკის დიზაინი */
+        .btn { width: 60px; height: 60px; background: rgba(80,80,80,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 22px; user-select: none; color: #E0E0E0; }
+        .btn:active, .btn.active { background: rgba(120,120,120,0.9); border-color: white; }
+        .btn.small { width: 50px; height: 50px; font-size: 16px; border-radius: 15px; }
+        .btn.sys { width: 70px; height: 35px; font-size: 14px; border-radius: 20px; }
+        
+        /* გრიდის განლაგება */
         .up { grid-column: 2; grid-row: 1; } .down { grid-column: 2; grid-row: 3; } .left { grid-column: 1; grid-row: 2; } .right { grid-column: 3; grid-row: 2; }
         .tri { grid-column: 2; grid-row: 1; } .cross { grid-column: 2; grid-row: 3; } .sq { grid-column: 1; grid-row: 2; } .circ { grid-column: 3; grid-row: 2; }
+
+        /* პარამეტრების ღილაკი და მენიუ */
+        #settingsBtn { position: absolute; top: 20px; right: 20px; z-index: 50; width: 50px; height: 50px; background: rgba(50,50,50,0.6); border-radius: 10px; font-size: 24px; border:none; color:white; pointer-events: auto; }
+        #settingsMenu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30,30,30,0.95); padding: 20px; border-radius: 15px; z-index: 60; flex-direction: column; gap: 10px; width: 250px; border: 1px solid #555; pointer-events: auto; }
+        .menu-btn { background: #1976D2; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; width: 100%; cursor: pointer; }
+        .menu-btn:active { background: #0D47A1; }
+        .close-btn { background: #D32F2F; margin-top: 10px; }
+
+        /* რედაქტირების რეჟიმის სტილი */
+        .edit-mode .control-group { outline: 2px dashed #00BCD4; background: rgba(0, 188, 212, 0.2); }
+        .edit-mode .btn { pointer-events: none; } /* რედაქტირებისას ღილაკები არ ეჭირება */
     </style>
 </head>
 <body>
@@ -27,48 +53,76 @@
     
     <div id="overlay">
         <h2 id="statusText">უკავშირდება ჰოსტს...</h2>
-        <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer;">თამაშის დაწყება</button>
+        <button id="startBtn" style="display:none; padding: 15px 30px; font-size: 18px; cursor: pointer; background: #4CAF50; color:white; border:none; border-radius: 10px;">თამაშის დაწყება</button>
+    </div>
+
+    <button id="settingsBtn" onclick="toggleSettings()">⚙</button>
+
+    <div id="settingsMenu">
+        <h3 style="margin: 0 0 10px 0; text-align: center;">პარამეტრები</h3>
+        <button class="menu-btn" onclick="toggleRatio()" id="ratioBtn">📺 ეკრანი: 16:9</button>
+        <button class="menu-btn" onclick="cycleSplitScreen()" id="splitBtn">✂️ ეკრანის გაჭრა: არა</button>
+        <button class="menu-btn" onclick="toggleEditMode()" id="editBtn">✏️ ღილაკების გადატანა</button>
+        <button class="menu-btn" onclick="toggleControls()" id="visBtn">🎮 სენსორების დამალვა</button>
+        <button class="menu-btn close-btn" onclick="toggleSettings()">❌ დახურვა</button>
     </div>
 
     <div id="controls">
-        <div class="btn-group dpad">
-            <div class="btn up" onpointerdown="sendAxis(1, -1)" onpointerup="sendAxis(1, 0)">▲</div>
-            <div class="btn down" onpointerdown="sendAxis(1, 1)" onpointerup="sendAxis(1, 0)">▼</div>
-            <div class="btn left" onpointerdown="sendAxis(0, -1)" onpointerup="sendAxis(0, 0)">◀</div>
-            <div class="btn right" onpointerdown="sendAxis(0, 1)" onpointerup="sendAxis(0, 0)">▶</div>
+        <div class="control-group dpad-group" id="grp-dpad">
+            <div class="btn up" onpointerdown="sendAxis(1, -1, this)" onpointerup="sendAxis(1, 0, this)" onpointercancel="sendAxis(1, 0, this)">▲</div>
+            <div class="btn down" onpointerdown="sendAxis(1, 1, this)" onpointerup="sendAxis(1, 0, this)" onpointercancel="sendAxis(1, 0, this)">▼</div>
+            <div class="btn left" onpointerdown="sendAxis(0, -1, this)" onpointerup="sendAxis(0, 0, this)" onpointercancel="sendAxis(0, 0, this)">◀</div>
+            <div class="btn right" onpointerdown="sendAxis(0, 1, this)" onpointerup="sendAxis(0, 0, this)" onpointercancel="sendAxis(0, 0, this)">▶</div>
         </div>
-        <div class="btn-group actions">
-            <div class="btn tri" onpointerdown="sendBtn(9, true)" onpointerup="sendBtn(9, false)">△</div>
-            <div class="btn cross" onpointerdown="sendBtn(0, true)" onpointerup="sendBtn(0, false)">✕</div>
-            <div class="btn sq" onpointerdown="sendBtn(1, true)" onpointerup="sendBtn(1, false)">□</div>
-            <div class="btn circ" onpointerdown="sendBtn(8, true)" onpointerup="sendBtn(8, false)">○</div>
+        
+        <div class="control-group action-group" id="grp-action">
+            <div class="btn tri" onpointerdown="sendBtn(9, true, this)" onpointerup="sendBtn(9, false, this)" onpointercancel="sendBtn(9, false, this)">△</div>
+            <div class="btn cross" onpointerdown="sendBtn(0, true, this)" onpointerup="sendBtn(0, false, this)" onpointercancel="sendBtn(0, false, this)">✕</div>
+            <div class="btn sq" onpointerdown="sendBtn(1, true, this)" onpointerup="sendBtn(1, false, this)" onpointercancel="sendBtn(1, false, this)">□</div>
+            <div class="btn circ" onpointerdown="sendBtn(8, true, this)" onpointerup="sendBtn(8, false, this)" onpointercancel="sendBtn(8, false, this)">○</div>
+        </div>
+
+        <div class="control-group shoulder-l-group" id="grp-l">
+            <div class="btn small" onpointerdown="sendBtn(12, true, this)" onpointerup="sendBtn(12, false, this)">L2</div>
+            <div class="btn small" onpointerdown="sendBtn(10, true, this)" onpointerup="sendBtn(10, false, this)">L1</div>
+        </div>
+
+        <div class="control-group shoulder-r-group" id="grp-r">
+            <div class="btn small" onpointerdown="sendBtn(11, true, this)" onpointerup="sendBtn(11, false, this)">R1</div>
+            <div class="btn small" onpointerdown="sendBtn(13, true, this)" onpointerup="sendBtn(13, false, this)">R2</div>
+        </div>
+
+        <div class="control-group system-group" id="grp-sys">
+            <div class="btn sys" onpointerdown="sendBtn(2, true, this)" onpointerup="sendBtn(2, false, this)">SELECT</div>
+            <div class="btn sys" onpointerdown="sendBtn(3, true, this)" onpointerup="sendBtn(3, false, this)">START</div>
         </div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const hostId = urlParams.get('id');
-        const statusText = document.getElementById('statusText');
-        const startBtn = document.getElementById('startBtn');
-        const controls = document.getElementById('controls');
         let activeConnection = null;
 
+        // პარამეტრების ცვლადები
+        let is4to3 = false;
+        let splitMode = 0; // 0=normal, 1=top, 2=bottom
+        let isEditMode = false;
+        let controlsVisible = true;
+
         if (!hostId) {
-            statusText.innerText = "შეცდომა: ლინკში Host ID ვერ მოიძებნა.";
+            document.getElementById('statusText').innerText = "შეცდომა: ლინკში Host ID ვერ მოიძებნა.";
         } else {
             const peer = new Peer({ config: { 'iceServers': [ { urls: 'stun:stun.l.google.com:19302' } ] } });
             let jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
-            
             let audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
             let nextAudioTime = 0;
 
             peer.on('open', function() {
                 const conn = peer.connect(hostId, { reliable: true });
-                
                 conn.on('open', function() {
                     activeConnection = conn;
-                    statusText.innerText = "წარმატებით დაუკავშირდა!";
-                    startBtn.style.display = "block"; // ველოდებით იუზერის დაჭერას, რომ ხმა/ვიდეო ჩაირთოს (ბრაუზერის წესია)
+                    document.getElementById('statusText').innerText = "წარმატებით დაუკავშირდა!";
+                    document.getElementById('startBtn').style.display = "block";
                 });
 
                 conn.on('data', function(data) {
@@ -83,18 +137,16 @@
                         jmuxer.feed({ video: bytes });
                     }
                     if (data.type === 'aud') {
-                        if(audioCtx.state === 'suspended') return; // სანამ Start-ს არ დააჭერს, ხმას არ ვუშვებთ
+                        if(audioCtx.state === 'suspended') return;
                         let binaryString = atob(data.data);
                         let bytes = new Uint8Array(binaryString.length);
                         for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
                         let int16 = new Int16Array(bytes.buffer);
                         let float32 = new Float32Array(int16.length);
                         for(let i=0; i<int16.length; i++) { float32[i] = int16[i] / 32768.0; }
-                        
                         let audioBuffer = audioCtx.createBuffer(2, int16.length / 2, 44100);
                         audioBuffer.getChannelData(0).set(float32.filter((_, i) => i % 2 === 0));
                         audioBuffer.getChannelData(1).set(float32.filter((_, i) => i % 2 !== 0));
-                        
                         let source = audioCtx.createBufferSource();
                         source.buffer = audioBuffer;
                         source.connect(audioCtx.destination);
@@ -104,25 +156,109 @@
                 });
             });
 
-            startBtn.addEventListener('click', () => {
+            document.getElementById('startBtn').addEventListener('click', () => {
                 document.getElementById('overlay').style.display = 'none';
-                controls.style.display = 'block';
                 document.getElementById('player').play();
                 if(audioCtx.state === 'suspended') audioCtx.resume();
             });
         }
 
-        // ღილაკების სიგნალის გაგზავნა აპლიკაციაში (Player 2)
-        function sendBtn(index, isDown) {
-            if (activeConnection && activeConnection.open) {
-                activeConnection.send({player: 2, type: 'btn', index: index, isDown: isDown, val: 0.0});
+        // --- სიგნალების გაგზავნა ---
+        function sendBtn(index, isDown, el) {
+            if (isEditMode) return;
+            if(isDown) el.classList.add('active'); else el.classList.remove('active');
+            if (activeConnection && activeConnection.open) activeConnection.send({player: 2, type: 'btn', index: index, isDown: isDown, val: 0.0});
+        }
+        function sendAxis(index, value, el) {
+            if (isEditMode) return;
+            if(value !== 0) el.classList.add('active'); else el.classList.remove('active');
+            if (activeConnection && activeConnection.open) activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
+        }
+
+        // --- პარამეტრების ფუნქციები ---
+        function toggleSettings() {
+            const menu = document.getElementById('settingsMenu');
+            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleRatio() {
+            is4to3 = !is4to3;
+            document.getElementById('ratioBtn').innerText = is4to3 ? "📺 ეკრანი: 4:3" : "📺 ეკრანი: 16:9";
+            updateVideoStyle();
+        }
+
+        function cycleSplitScreen() {
+            splitMode = (splitMode + 1) % 3;
+            const btn = document.getElementById('splitBtn');
+            if (splitMode === 0) btn.innerText = "✂️ ეკრანის გაჭრა: არა";
+            if (splitMode === 1) btn.innerText = "✂️ ეკრანის გაჭრა: ზედა ნახევარი";
+            if (splitMode === 2) btn.innerText = "✂️ ეკრანის გაჭრა: ქვედა ნახევარი";
+            updateVideoStyle();
+        }
+
+        function updateVideoStyle() {
+            const video = document.getElementById('player');
+            video.style.objectFit = is4to3 ? 'contain' : 'fill';
+            
+            // ზუსტი ლოგიკა რაც Kotlin-ში გეწერა
+            if (is4to3) {
+                if (splitMode === 1) { video.style.clipPath = 'inset(0 0 50% 0)'; video.style.transform = 'translateY(25%) scaleY(1)'; }
+                else if (splitMode === 2) { video.style.clipPath = 'inset(50% 0 0 0)'; video.style.transform = 'translateY(-25%) scaleY(1)'; }
+                else { video.style.clipPath = 'none'; video.style.transform = 'translateY(0) scaleY(1)'; }
+            } else {
+                if (splitMode === 1) { video.style.clipPath = 'none'; video.style.transformOrigin = 'center top'; video.style.transform = 'translateY(0) scaleY(2)'; }
+                else if (splitMode === 2) { video.style.clipPath = 'none'; video.style.transformOrigin = 'center bottom'; video.style.transform = 'translateY(0) scaleY(2)'; }
+                else { video.style.clipPath = 'none'; video.style.transformOrigin = 'center center'; video.style.transform = 'translateY(0) scaleY(1)'; }
             }
         }
-        function sendAxis(index, value) {
-            if (activeConnection && activeConnection.open) {
-                activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
-            }
+
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            document.getElementById('controls').style.opacity = controlsVisible ? "1" : "0";
+            document.getElementById('visBtn').innerText = controlsVisible ? "🎮 სენსორების დამალვა" : "🎮 სენსორების ჩვენება";
+            toggleSettings();
         }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const controlsDiv = document.getElementById('controls');
+            if (isEditMode) {
+                controlsDiv.classList.add('edit-mode');
+                document.getElementById('editBtn').innerText = "💾 რედაქტირების შენახვა";
+            } else {
+                controlsDiv.classList.remove('edit-mode');
+                document.getElementById('editBtn').innerText = "✏️ ღილაკების გადატანა";
+            }
+            toggleSettings();
+        }
+
+        // --- გადაადგილების (Drag) ლოგიკა ---
+        const groups = document.querySelectorAll('.control-group');
+        groups.forEach(group => {
+            let startX, startY, initialLeft, initialTop;
+            group.addEventListener('pointerdown', (e) => {
+                if (!isEditMode) return;
+                e.preventDefault();
+                const rect = group.getBoundingClientRect();
+                startX = e.clientX; startY = e.clientY;
+                initialLeft = rect.left; initialTop = rect.top;
+                
+                // ვაუქმებთ bottom/right პარამეტრებს, რომ left/top-ით ამოძრავდეს
+                group.style.bottom = 'auto'; group.style.right = 'auto';
+                group.style.left = initialLeft + 'px'; group.style.top = initialTop + 'px';
+
+                function onMove(ev) {
+                    group.style.left = (initialLeft + ev.clientX - startX) + 'px';
+                    group.style.top = (initialTop + ev.clientY - startY) + 'px';
+                }
+                function onUp() {
+                    document.removeEventListener('pointermove', onMove);
+                    document.removeEventListener('pointerup', onUp);
+                }
+                document.addEventListener('pointermove', onMove);
+                document.addEventListener('pointerup', onUp);
+            });
+        });
     </script>
 </body>
 </html>
