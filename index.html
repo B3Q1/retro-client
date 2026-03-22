@@ -358,20 +358,26 @@
             'Digit3': {type: 'btn', idx: 13}  
         };
 
-        window.addEventListener('keydown', (e) => {
+       window.addEventListener('keydown', (e) => {
+            // ეს ბლოკავს ტელევიზორის სისტემურ მოქმედებებს (აპების გახსნა, უკან გასვლა და ა.შ.)
+            if (e.cancelable) { e.preventDefault(); }
+            
             if(keyMap[e.code] && !e.repeat) {
                 const map = keyMap[e.code];
                 if(map.type === 'btn') sendBtn(map.idx, true);
                 else sendAxis(map.idx, map.val);
             }
-        });
+        }, { passive: false });
+
         window.addEventListener('keyup', (e) => {
+            if (e.cancelable) { e.preventDefault(); }
+            
             if(keyMap[e.code]) {
                 const map = keyMap[e.code];
                 if(map.type === 'btn') sendBtn(map.idx, false);
                 else sendAxis(map.idx, 0);
             }
-        });
+        }, { passive: false });
 
         let prevPadState = {};
         function startGamepadPolling() { requestAnimationFrame(pollGamepads); }
