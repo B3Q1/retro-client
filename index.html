@@ -30,7 +30,7 @@
         .menu-title { text-align: center; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
         
         /* Edit Mode */
-        .drag-handle { position: absolute; width: 40px; height: 40px; background: rgba(0, 188, 212, 0.8); border-radius: 50%; transform: translate(-50%, -50%); z-index: 15; display: none; pointer-events: auto; }
+        .drag-handle { position: absolute; width: 60px; height: 60px; background: rgba(0, 188, 212, 0.7); border-radius: 50%; transform: translate(-50%, -50%); z-index: 15; display: none; pointer-events: auto; touch-action: none; border: 2px solid white; }
         #saveLayoutBtn { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 30; background: #4CAF50; padding: 10px 20px; border: none; border-radius: 5px; color: white; font-size: 16px; pointer-events: auto; cursor: pointer; }
     </style>
 </head>
@@ -92,8 +92,7 @@
     </div>
 
     <script>
-        // --- Android Logic for Button Layout ---
-        // ზუსტად იგივე პოზიციები, რაც შენს GamePlayerFragment.kt-ში წერია
+        // --- Android Logic for Button Layout (4 დამოუკიდებელი ჯგუფი) ---
         let dpadPos = { x: 0.13, y: 0.60 };
         let actionPos = { x: 0.92, y: 0.60 };
         let lPos = { x: 0.13, y: 0.32 };
@@ -102,40 +101,37 @@
         function applyAndroidLayout() {
             let w = window.innerWidth;
             let h = window.innerHeight;
-            
-            // ვაფიქსირებთ, რომ სიგანე ყოველთვის სიგრძეზე მეტი იყოს (Landscape ლოგიკა)
             let screenWidth = Math.max(w, h);
             let screenHeight = Math.min(w, h);
 
-            // უსაფრთხოების ზონა ეკრანის კიდეებიდან (მინიმუმ 90 პიქსელი)
-            let safeMarginX = 90; 
-            let safeMarginY = 90;
+            let safeX = 90; // უსაფრთხო ზონა კიდეებიდან
+            let safeY = 90;
 
-            // მარცხენა ღილაკები არასდროს მივა მარცხენა კიდესთან 90 პიქსელზე ახლოს
-            let leftX = Math.max(screenWidth * lPos.x, safeMarginX);
-            
-            // მარჯვენა ღილაკები არასდროს მივა მარჯვენა კიდესთან 90 პიქსელზე ახლოს
-            let rightX = Math.min(screenWidth * rPos.x, screenWidth - safeMarginX);
+            // 1. D-PAD
+            let dX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * dpadPos.x));
+            let dY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * dpadPos.y));
+            document.getElementById('grp-dpad').style.left = dX + "px";
+            document.getElementById('grp-dpad').style.top = dY + "px";
 
-            // ზედა და ქვედა პოზიციების დაზღვევა
-            let bottomY = Math.min(screenHeight * dpadPos.y, screenHeight - safeMarginY);
-            let topY = Math.max(screenHeight * lPos.y, safeMarginY);
+            // 2. Action (X, O, შ, △)
+            let aX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * actionPos.x));
+            let aY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * actionPos.y));
+            document.getElementById('grp-action').style.left = aX + "px";
+            document.getElementById('grp-action').style.top = aY + "px";
 
-            // პოზიციების მინიჭება
-            document.getElementById('grp-dpad').style.left = leftX + "px";
-            document.getElementById('grp-dpad').style.top = bottomY + "px";
+            // 3. Left Shoulder (L1, L2)
+            let lX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * lPos.x));
+            let lY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * lPos.y));
+            document.getElementById('grp-l').style.left = lX + "px";
+            document.getElementById('grp-l').style.top = lY + "px";
 
-            document.getElementById('grp-action').style.left = rightX + "px";
-            document.getElementById('grp-action').style.top = bottomY + "px";
-
-            document.getElementById('grp-l').style.left = leftX + "px";
-            document.getElementById('grp-l').style.top = topY + "px";
-
-            document.getElementById('grp-r').style.left = rightX + "px";
-            document.getElementById('grp-r').style.top = topY + "px";
+            // 4. Right Shoulder (R1, R2)
+            let rX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * rPos.x));
+            let rY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * rPos.y));
+            document.getElementById('grp-r').style.left = rX + "px";
+            document.getElementById('grp-r').style.top = rY + "px";
         }
 
-        // ეკრანის ზომის შეცვლისას (ან გადაბრუნებისას) ავტომატურად სწორდება ღილაკები
         window.addEventListener('resize', applyAndroidLayout);
         applyAndroidLayout();
 
@@ -461,14 +457,17 @@
             
             const handles = document.querySelectorAll('.drag-handle');
             const groups = {
-                'handle-dpad': 'grp-dpad', 'handle-l': 'grp-l', 'handle-r': 'grp-r', 'handle-action': 'grp-action'
+                'handle-dpad': 'grp-dpad', 
+                'handle-l': 'grp-l', 
+                'handle-r': 'grp-r', 
+                'handle-action': 'grp-action'
             };
 
             handles.forEach(handle => {
                 handle.style.display = 'block';
                 const grp = document.getElementById(groups[handle.id]);
                 
-                // საწყისი პოზიციის ზუსტი სინქრონიზაცია ღილაკებთან
+                // წერტილის საწყისი პოზიცია ემთხვევა ჯგუფის ცენტრს
                 handle.style.left = grp.style.left;
                 handle.style.top = grp.style.top;
 
@@ -477,30 +476,26 @@
                 handle.onpointerdown = (e) => {
                     isDragging = true;
                     handle.setPointerCapture(e.pointerId);
+                    handle.style.background = 'rgba(255, 87, 34, 0.9)'; // დაჭერისას ფერს იცვლის სტაფილოსფრად
                 };
                 
                 handle.onpointermove = (e) => {
                     if(!isDragging) return;
                     
-                    // ეკრანის ზომების გამოთვლა (ავტომატური Landscape მხარდაჭერით)
                     let w = window.innerWidth;
                     let h = window.innerHeight;
-                    let screenWidth = Math.max(w, h);
-                    let screenHeight = Math.min(w, h);
+                    let xPercent = e.clientX / w;
+                    let yPercent = e.clientY / h;
                     
-                    let xPercent = e.clientX / screenWidth;
-                    let yPercent = e.clientY / screenHeight;
-                    
-                    // ვანახლებთ კოორდინატებს
+                    // აახლებს მხოლოდ იმ ჯგუფის კოორდინატს, რომელსაც ეხები
                     if(handle.id === 'handle-dpad') dpadPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-action') actionPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-l') lPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-r') rPos = {x: xPercent, y: yPercent};
 
-                    // ვანახლებთ ღილაკების პოზიციას (აქ მუშაობს 90px დაცვის მექანიზმი)
                     applyAndroidLayout(); 
                     
-                    // ლურჯ წერტილს ვსვამთ ზუსტად იქ, სადაც ღილაკების ცენტრი გაჩერდა
+                    // წერტილი ზუსტად მიჰყვება განახლებულ ჯგუფს (კედელსაც რომ მიეჯახოს, აღარ გაცდება)
                     handle.style.left = grp.style.left;
                     handle.style.top = grp.style.top;
                 };
@@ -508,8 +503,10 @@
                 handle.onpointerup = (e) => { 
                     isDragging = false; 
                     handle.releasePointerCapture(e.pointerId); 
+                    handle.style.background = 'rgba(0, 188, 212, 0.7)'; // უბრუნდება ძველ ფერს
                 };
             });
+        }
 
         document.getElementById('saveLayoutBtn').onclick = () => {
             isEditMode = false;
