@@ -13,9 +13,7 @@
     <style>
         body { margin: 0; background: black; overflow: hidden; font-family: sans-serif; color: white; touch-action: none; user-select: none; }
         #video-container { position: absolute; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; z-index: 1; }
-        video { width: 100%; height: 100%; object-fit: fill; transition: all 0.3s ease; pointer-events: none; outline: none; }
-        video::-webkit-media-controls { display: none !important; }
-        video::-webkit-media-controls-enclosure { display: none !important; }
+        video { width: 100%; height: 100%; object-fit: fill; transition: all 0.3s ease; }
         
         #overlay { position: absolute; z-index: 50; background: rgba(0,0,0,0.85); width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
@@ -43,8 +41,7 @@
 <body>
 
     <div id="video-container">
-        <video id="player" autoplay muted playsinline tabindex="-1" disablePictureInPicture disableRemotePlayback></video>
-        <div style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; background: transparent;"></div>
+        <video id="player" autoplay muted playsinline></video>
     </div>
     
     <div id="overlay">
@@ -361,26 +358,20 @@
             'Digit3': {type: 'btn', idx: 13}  
         };
 
-       window.addEventListener('keydown', (e) => {
-            // ეს ბლოკავს ტელევიზორის სისტემურ მოქმედებებს (აპების გახსნა, უკან გასვლა და ა.შ.)
-            if (e.cancelable) { e.preventDefault(); }
-            
+        window.addEventListener('keydown', (e) => {
             if(keyMap[e.code] && !e.repeat) {
                 const map = keyMap[e.code];
                 if(map.type === 'btn') sendBtn(map.idx, true);
                 else sendAxis(map.idx, map.val);
             }
-        }, { passive: false });
-
+        });
         window.addEventListener('keyup', (e) => {
-            if (e.cancelable) { e.preventDefault(); }
-            
             if(keyMap[e.code]) {
                 const map = keyMap[e.code];
                 if(map.type === 'btn') sendBtn(map.idx, false);
                 else sendAxis(map.idx, 0);
             }
-        }, { passive: false });
+        });
 
         let prevPadState = {};
         function startGamepadPolling() { requestAnimationFrame(pollGamepads); }
