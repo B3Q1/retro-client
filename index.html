@@ -9,27 +9,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RetroGames - Web Player</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jmuxer@2.0.5/dist/jmuxer.min.js"></script>
     <style>
         body { margin: 0; background: black; overflow: hidden; font-family: sans-serif; color: white; touch-action: none; user-select: none; }
         #video-container { position: absolute; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; z-index: 1; }
-        /* Video შეიცვალა Canvas-ით */
-        canvas { width: 100%; height: 100%; object-fit: fill; transition: all 0.3s ease; }
+        video { width: 100%; height: 100%; object-fit: fill; transition: all 0.3s ease; }
         
         #overlay { position: absolute; z-index: 50; background: rgba(0,0,0,0.85); width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
+        /* კონტროლერების ფენა */
         #controls { position: absolute; z-index: 10; width: 100vw; height: 100vh; pointer-events: none; }
         .control-group { position: absolute; pointer-events: auto; transform: translate(-50%, -50%); }
         
+        /* ღილაკების დიზაინი (Android-ის ანალოგი 53px ზომით) */
         .btn { position: absolute; width: 53px; height: 53px; background: rgba(80,80,80,0.8); border: 1px solid rgba(255,255,255,0.5); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; color: #E0E0E0; transform: translate(-50%, -50%); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn:active, .btn.active { background: rgba(120,120,120,0.9); border-color: white; }
         .btn.small { font-size: 14px; }
         
+        /* სეთინგების ღილაკი და მენიუ */
         #settingsBtn { position: absolute; top: 20px; right: 20px; z-index: 20; width: 50px; height: 50px; background: rgba(50,50,50,0.6); border: none; border-radius: 10px; color: white; font-size: 24px; pointer-events: auto; cursor: pointer; }
         #menu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border-radius: 10px; z-index: 30; width: 300px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
         .menu-btn { width: 100%; padding: 12px; margin: 5px 0; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 16px; cursor: pointer; }
         .menu-btn:active { background: #555; }
         .menu-title { text-align: center; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
         
+        /* Edit Mode */
         .drag-handle { position: absolute; width: 40px; height: 40px; background: rgba(0, 188, 212, 0.7); border-radius: 50%; transform: translate(-50%, -50%); z-index: 15; display: none; pointer-events: auto; touch-action: none; border: 2px solid white; }
         #saveLayoutBtn { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 30; background: #4CAF50; padding: 10px 20px; border: none; border-radius: 5px; color: white; font-size: 16px; pointer-events: auto; cursor: pointer; }
     </style>
@@ -37,7 +41,7 @@
 <body>
 
     <div id="video-container">
-        <canvas id="player"></canvas>
+        <video id="player" autoplay muted playsinline disableRemotePlayback></video>
     </div>
     
     <div id="overlay">
@@ -46,7 +50,7 @@
         <p id="supportText" style="margin-top:20px; color:#aaa; font-size:14px;">მხარდაჭერილია კლავიატურა და PC/TV ჯოისტიკი</p>
         <div id="iosWarning" style="display:none; margin-top:15px; background:rgba(255,152,0,0.15); border:1px solid #FF9800; padding:12px; border-radius:8px; max-width:90%; text-align:center; font-size:13px; color:#FFCC80; line-height:1.5;">
             <b id="txtIosTitle">⚠️ iPhone-ის მომხმარებლების საყურადღებოდ:</b><br>
-            <span id="txtIosDesc">თუ ეკრანი შავია, დაამატეთ ეს საიტი ეკრანზე (Share -> Add to Home Screen) და შედით იქიდან. საჭიროებს მინიმუმ iOS 16.4-ს.</span>
+            <span id="txtIosDesc">თუ ვიდეო არ ირთვება, შედით ტელეფონის პარამეტრებში:<br><b>Settings -> Safari -> Advanced -> Feature Flags</b><br>და ჩართეთ <b>Managed Media Source API</b>.</span>
         </div>
     </div>
 
@@ -100,7 +104,7 @@
     </div>
 
     <script>
-        // --- Android Layout Logic ---
+        // --- Android Logic for Button Layout (4 დამოუკიდებელი ჯგუფი) ---
         let dpadPos = { x: 0.13, y: 0.60 };
         let actionPos = { x: 0.92, y: 0.60 };
         let lPos = { x: 0.13, y: 0.32 };
@@ -111,24 +115,29 @@
             let h = window.innerHeight;
             let screenWidth = Math.max(w, h);
             let screenHeight = Math.min(w, h);
-            let safeX = 90; 
+
+            let safeX = 90; // უსაფრთხო ზონა კიდეებიდან
             let safeY = 90;
 
+            // 1. D-PAD
             let dX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * dpadPos.x));
             let dY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * dpadPos.y));
             document.getElementById('grp-dpad').style.left = dX + "px";
             document.getElementById('grp-dpad').style.top = dY + "px";
 
+            // 2. Action (X, O, შ, △)
             let aX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * actionPos.x));
             let aY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * actionPos.y));
             document.getElementById('grp-action').style.left = aX + "px";
             document.getElementById('grp-action').style.top = aY + "px";
 
+            // 3. Left Shoulder (L1, L2)
             let lX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * lPos.x));
             let lY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * lPos.y));
             document.getElementById('grp-l').style.left = lX + "px";
             document.getElementById('grp-l').style.top = lY + "px";
 
+            // 4. Right Shoulder (R1, R2)
             let rX = Math.max(safeX, Math.min(screenWidth - safeX, screenWidth * rPos.x));
             let rY = Math.max(safeY, Math.min(screenHeight - safeY, screenHeight * rPos.y));
             document.getElementById('grp-r').style.left = rX + "px";
@@ -138,37 +147,7 @@
         window.addEventListener('resize', applyAndroidLayout);
         applyAndroidLayout();
 
-        // --- WebCodecs (Canvas) Initialization ---
-        const canvas = document.getElementById('player');
-        const ctx = canvas.getContext('2d');
-        let videoDecoder = null;
-
-        function initDecoder() {
-            if (!window.VideoDecoder) {
-                console.error("WebCodecs API არ არის მხარდაჭერილი ამ ბრაუზერში.");
-                return;
-            }
-            if (videoDecoder && videoDecoder.state !== 'closed') {
-                videoDecoder.close();
-            }
-            
-            videoDecoder = new VideoDecoder({
-                output: (frame) => {
-                    // კანვასის ზომის მორგება კადრზე პირველად
-                    if (canvas.width !== frame.codedWidth) canvas.width = frame.codedWidth;
-                    if (canvas.height !== frame.codedHeight) canvas.height = frame.codedHeight;
-                    
-                    ctx.drawImage(frame, 0, 0);
-                    frame.close();
-                },
-                error: (e) => console.error("VideoDecoder ერორი:", e)
-            });
-
-            // Android-ის სტანდარტული AMediaCodec Baseline პროფილი (avc1.42E01E ან მსგავსი)
-            videoDecoder.configure({ codec: 'avc1.42E01E' }); 
-        }
-
-        // --- PeerJS & Video/Audio Logic ---
+        // --- PeerJS & Video Logic ---
         const urlParams = new URLSearchParams(window.location.search);
         const hostId = urlParams.get('id');
         let activeConnection = null;
@@ -181,11 +160,10 @@
             document.getElementById('statusText').innerText = "შეცდომა: ლინკში Host ID ვერ მოიძებნა.";
         } else {
             const peer = new Peer({ config: { 'iceServers': [ { urls: 'stun:stun.l.google.com:19302' } ] } });
-            
+            window.MediaSource = window.MediaSource || window.ManagedMediaSource || window.WebKitMediaSource;
+            let jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
             let audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
             let nextAudioTime = 0;
-
-            initDecoder(); // დეკოდერის ჩართვა
 
             peer.on('open', () => {
                 const conn = peer.connect(hostId, { reliable: true });
@@ -198,54 +176,16 @@
 
                 conn.on('data', (data) => {
                     if (data.type === 'vid_reset') {
-                        initDecoder();
+                        jmuxer.destroy();
+                        window.MediaSource = window.MediaSource || window.ManagedMediaSource || window.WebKitMediaSource;
+                        jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
                     }
                     if (data.type === 'vid') {
-    if (!videoDecoder || videoDecoder.state !== 'configured') return;
-
-    let binaryString = atob(data.data);
-    let bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-    
-    // --- H.264 Annex B მინი-პარსერი ---
-    let isKeyFrame = false;
-    
-    // ვსკანირებთ ბაიტებს Start Code-ის მოსაძებნად
-    for (let i = 0; i < bytes.length - 4; i++) {
-        if (bytes[i] === 0 && bytes[i+1] === 0) {
-            let offset = 0;
-            // ვამოწმებთ 3-ბაიტიან (00 00 01) და 4-ბაიტიან (00 00 00 01) სტარტ კოდებს
-            if (bytes[i+2] === 1) offset = 3;
-            else if (bytes[i+2] === 0 && bytes[i+3] === 1) offset = 4;
-            
-            if (offset > 0) {
-                // NAL-ის ტიპის ამოღება (ბოლო 5 ბიტი)
-                let nalType = bytes[i + offset] & 0x1F;
-                
-                // NAL 5 = IDR (მთავარი კადრი), 7 = SPS (პარამეტრები), 8 = PPS
-                if (nalType === 5 || nalType === 7 || nalType === 8) {
-                    isKeyFrame = true;
-                    break; // თუ ერთი მაინც ვიპოვეთ, ესე იგი KeyFrame-ია და ძებნას ვწყვეტთ
-                }
-                i += offset - 1; // ვახტებით ნაპოვნ კოდს, რომ დრო დავზოგოთ
-            }
-        }
-    }
-
-    // ვქმნით ვიდეოს ჩანკს WebCodecs-ისთვის
-    let chunk = new EncodedVideoChunk({
-        type: isKeyFrame ? 'key' : 'delta',
-        timestamp: performance.now() * 1000,
-        data: bytes
-    });
-
-    try {
-        videoDecoder.decode(chunk);
-    } catch(e) {
-        // თავიდან შეიძლება რამდენიმე კადრი ჩავარდეს (სანამ პირველი KeyFrame არ მოვა)
-        console.warn("დეკოდირება ჩავარდა (ველოდებით KeyFrame-ს):", e.message);
-    }
-}
+                        let binaryString = atob(data.data);
+                        let bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                        jmuxer.feed({ video: bytes });
+                    }
                     if (data.type === 'aud') {
                         if(audioCtx.state === 'suspended') return;
                         let binaryString = atob(data.data);
@@ -263,29 +203,38 @@
                         source.buffer = audioBuffer;
                         source.connect(audioCtx.destination);
                         
+                        let v = document.getElementById('player');
+                        if (v && v.buffered.length > 0) {
+                            let liveEdge = v.buffered.end(v.buffered.length - 1);
+                            if (liveEdge - v.currentTime > 0.4) v.currentTime = liveEdge;
+                        }
                         source.start(nextAudioTime);
                         nextAudioTime += audioBuffer.duration;
                     }
                 });
             });
 
+            // --- Fullscreen და ავტომატური ჰორიზონტალური რეჟიმი ---
             document.getElementById('startBtn').addEventListener('click', async () => {
                 let elem = document.documentElement;
                 try {
+                    // სრულ ეკრანზე გადასვლა
                     if (elem.requestFullscreen) { await elem.requestFullscreen(); }
                     else if (elem.webkitRequestFullscreen) { await elem.webkitRequestFullscreen(); }
 
+                    // ეკრანის ჰორიზონტალურად ჩაკეტვა (Landscape Lock)
                     if (screen.orientation && screen.orientation.lock) {
                         await screen.orientation.lock('landscape');
                     }
                 } catch (err) {
-                    console.log("Landscape lock Error:", err);
+                    console.log("Landscape lock არ არის მხარდაჭერილი ამ ბრაუზერში, ან შეცდომაა:", err);
                 }
 
                 document.getElementById('overlay').style.display = 'none';
-                // Canvas-ს არ სჭირდება .play() ტრიგერი
+                document.getElementById('player').play();
                 if(audioCtx.state === 'suspended') audioCtx.resume();
                 
+                // ეკრანის გადაბრუნების შემდეგ ღილაკების პოზიციებს ხელახლა ვასწორებთ
                 setTimeout(applyAndroidLayout, 500); 
             });
         }
@@ -298,7 +247,7 @@
             if (activeConnection && activeConnection.open) activeConnection.send({player: 2, type: 'axis', index: index, isDown: false, val: value});
         }
 
-        // --- Touch Logic ---
+        // --- Smart Touch Logic (Android 8-Way D-Pad + Buttons) ---
         const activeTouches = {};
         const controlsDiv = document.getElementById('controls');
         const dpadGrp = document.getElementById('grp-dpad');
@@ -313,6 +262,7 @@
             sendBtn(parseInt(el.dataset.btn), isDown);
         }
 
+        // ჯვრის ღილაკების ვიზუალურად ანთება გასრიალებისას
         function updateDpadVisuals(x, y) {
             let rightBtn = document.querySelector('[data-axis="0,1"]');
             let leftBtn = document.querySelector('[data-axis="0,-1"]');
@@ -328,10 +278,11 @@
         function processTouches(e) {
             if (isEditMode || !isControlsVisible) return;
 
+            // ვპოულობთ ჯვრის (D-Pad) ცენტრს ეკრანზე
             let dpadRect = dpadGrp.getBoundingClientRect();
             let dpadCenterX = dpadRect.left + dpadRect.width / 2;
             let dpadCenterY = dpadRect.top + dpadRect.height / 2;
-            let dpadRadius = 120; 
+            let dpadRadius = 120; // რადიუსი, სადაც თითი ჯოისტიკად აღიქმება
 
             let newDpadX = 0;
             let newDpadY = 0;
@@ -343,15 +294,19 @@
                 let ty = t.clientY;
                 currentTouchIds.push(t.identifier);
 
+                // 1. D-Pad-ის ლოგიკა (მანძილი ცენტრიდან)
                 let distToDpad = Math.hypot(tx - dpadCenterX, ty - dpadCenterY);
                 if (distToDpad < dpadRadius) {
-                    let deadzone = 25; 
-                    if (tx > dpadCenterX + deadzone) newDpadX = 1;      
-                    else if (tx < dpadCenterX - deadzone) newDpadX = -1;
+                    let deadzone = 25; // 25px ცენტრიდან არის მკვდარი ზონა (რომ ტყუილად არ დაეჭიროს)
 
-                    if (ty > dpadCenterY + deadzone) newDpadY = 1;      
-                    else if (ty < dpadCenterY - deadzone) newDpadY = -1;
-                } else {
+                    if (tx > dpadCenterX + deadzone) newDpadX = 1;      // მარჯვნივ
+                    else if (tx < dpadCenterX - deadzone) newDpadX = -1;// მარცხნივ
+
+                    if (ty > dpadCenterY + deadzone) newDpadY = 1;      // უკან (ქვემოთ)
+                    else if (ty < dpadCenterY - deadzone) newDpadY = -1;// წინ (ზემოთ)
+                } 
+                // 2. ჩვეულებრივი ღილაკების ლოგიკა (X, O, R1, L1 და ა.შ.)
+                else {
                     let target = document.elementFromPoint(tx, ty);
                     if (target && target.classList.contains('btn') && target.dataset.btn) {
                         if (activeTouches[t.identifier] !== target) {
@@ -368,6 +323,7 @@
                 }
             }
 
+            // ვასუფთავებთ გაშვებულ ღილაკებს
             for (let id in activeTouches) {
                 if (!currentTouchIds.includes(parseInt(id))) {
                     triggerBtnEl(activeTouches[id], false);
@@ -375,12 +331,15 @@
                 }
             }
 
+            // ვაგზავნით D-Pad-ის განახლებულ სიგნალს (თუ შეიცვალა)
             if (newDpadX !== currentDpadX) { sendAxis(0, newDpadX); currentDpadX = newDpadX; }
             if (newDpadY !== currentDpadY) { sendAxis(1, newDpadY); currentDpadY = newDpadY; }
             
+            // ვანთებთ შესაბამის ღილაკებს დიაგონალებზე
             updateDpadVisuals(currentDpadX, currentDpadY);
         }
 
+        // ივენთების მიბმა
         controlsDiv.addEventListener('touchstart', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
         controlsDiv.addEventListener('touchmove', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
         controlsDiv.addEventListener('touchend', (e) => { e.preventDefault(); processTouches(e); }, { passive: false });
@@ -389,11 +348,16 @@
         const keyMap = {
             'KeyW': {type: 'axis', idx: 1, val: -1}, 'KeyS': {type: 'axis', idx: 1, val: 1},
             'KeyA': {type: 'axis', idx: 0, val: -1}, 'KeyD': {type: 'axis', idx: 0, val: 1},
-            'KeyK': {type: 'btn', idx: 0}, 'KeyJ': {type: 'btn', idx: 1}, 
-            'Space': {type: 'btn', idx: 2}, 'Enter': {type: 'btn', idx: 3}, 
-            'KeyL': {type: 'btn', idx: 8}, 'KeyI': {type: 'btn', idx: 9}, 
-            'KeyQ': {type: 'btn', idx: 10}, 'KeyE': {type: 'btn', idx: 11}, 
-            'Digit1': {type: 'btn', idx: 12}, 'Digit3': {type: 'btn', idx: 13}  
+            'KeyK': {type: 'btn', idx: 0}, 
+            'KeyJ': {type: 'btn', idx: 1}, 
+            'Space': {type: 'btn', idx: 2}, 
+            'Enter': {type: 'btn', idx: 3}, 
+            'KeyL': {type: 'btn', idx: 8}, 
+            'KeyI': {type: 'btn', idx: 9}, 
+            'KeyQ': {type: 'btn', idx: 10}, 
+            'KeyE': {type: 'btn', idx: 11}, 
+            'Digit1': {type: 'btn', idx: 12}, 
+            'Digit3': {type: 'btn', idx: 13}  
         };
 
         window.addEventListener('keydown', (e) => {
@@ -447,7 +411,7 @@
                 splitBot: 'ქვედა (P2)', edit: '✏️ ღილაკების გადატანა', hide: '🎮 სენსორების დამალვა', show: '🎮 სენსორების ჩვენება',
                 close: '❌ დახურვა',
                 iosTitle: '⚠️ iPhone-ის მომხმარებლების საყურადღებოდ:',
-                iosDesc: 'თუ ეკრანი შავია, დაამატეთ ეს საიტი ეკრანზე (Share -> Add to Home Screen) და შედით იქიდან. საჭიროებს მინიმუმ iOS 16.4-ს.'
+                iosDesc: 'თუ ვიდეო არ ირთვება:<br><b>1.</b> დაამატეთ ეს საიტი ეკრანზე (Share -> Add to Home Screen) და შედით იქიდან.<br><b>2.</b> ან შედით Settings -> Safari -> Advanced -> Feature Flags და ჩართეთ <b>Managed Media Source API</b>.'
             },
             'ENG': {
                 langBtn: 'ge GEO', menu: 'Settings', save: '💾 Save Layout', start: '▶ Start Game (Fullscreen)',
@@ -456,11 +420,14 @@
                 splitBot: 'Bottom (P2)', edit: '✏️ Edit Layout', hide: '🎮 Hide Controls', show: '🎮 Show Controls',
                 close: '❌ Close',
                 iosTitle: '⚠️ Attention iPhone Users:',
-                iosDesc: 'If the screen is black, add this site to your home screen (Share -> Add to Home Screen) and open it from there. Requires iOS 16.4+.'
+                iosDesc: 'If the video does not play:<br><b>1.</b> Add this site to your home screen (Share -> Add to Home Screen) and open it from there.<br><b>2.</b> Or go to Settings -> Safari -> Advanced -> Feature Flags and enable <b>Managed Media Source API</b>.'
             }
         };
 
-        function toggleLanguage() { currentLang = currentLang === 'GEO' ? 'ENG' : 'GEO'; applyLanguage(); }
+        function toggleLanguage() {
+            currentLang = currentLang === 'GEO' ? 'ENG' : 'GEO';
+            applyLanguage();
+        }
 
         function applyLanguage() {
             const l = langDict[currentLang];
@@ -469,19 +436,26 @@
             document.getElementById('saveLayoutBtn').innerText = l.save;
             document.getElementById('startBtn').innerText = l.start;
             document.getElementById('supportText').innerText = l.support;
+            
             document.getElementById('txtAspect').innerText = l.aspect;
             document.getElementById('aspectText').innerText = isAspectRatio4To3 ? l.aspectNative : l.aspectFull;
+            
             document.getElementById('txtSplit').innerText = l.split;
             document.getElementById('splitText').innerText = splitMode === 'top' ? l.splitTop : (splitMode === 'bottom' ? l.splitBot : l.splitNorm);
+            
             document.getElementById('txtEdit').innerText = l.edit;
             document.getElementById('txtControls').innerText = isControlsVisible ? l.hide : l.show;
             document.getElementById('txtClose').innerText = l.close;
+
             document.getElementById('txtIosTitle').innerText = l.iosTitle;
-            document.getElementById('txtIosDesc').innerHTML = l.iosDesc; 
+            document.getElementById('txtIosDesc').innerHTML = l.iosDesc; // innerHTML იმიტომ, რომ <b> ტეგები მუშაობდეს
         }
 
+        // ვამოწმებთ, არის თუ არა მომხმარებელი iOS-ზე (iPhone/iPad)
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (isIOS) document.getElementById('iosWarning').style.display = 'block';
+        if (isIOS) {
+            document.getElementById('iosWarning').style.display = 'block';
+        }
 
         document.getElementById('settingsBtn').onclick = () => { document.getElementById('menu').style.display = 'block'; };
         function closeMenu() { document.getElementById('menu').style.display = 'none'; }
@@ -494,36 +468,36 @@
         }
 
         function applyVideoStyle() {
-            const canvasEl = document.getElementById('player');
+            const video = document.getElementById('player');
             const fitMode = isAspectRatio4To3 ? 'contain' : 'fill';
-            canvasEl.style.objectFit = fitMode;
+            video.style.objectFit = fitMode;
 
             if (isAspectRatio4To3) {
                 if (splitMode === 'top') {
-                    canvasEl.style.clipPath = 'inset(0 0 50% 0)';
-                    canvasEl.style.transform = 'translateY(25%) scaleY(1)';
-                    canvasEl.style.transformOrigin = 'center center';
+                    video.style.clipPath = 'inset(0 0 50% 0)';
+                    video.style.transform = 'translateY(25%) scaleY(1)';
+                    video.style.transformOrigin = 'center center';
                 } else if (splitMode === 'bottom') {
-                    canvasEl.style.clipPath = 'inset(50% 0 0 0)';
-                    canvasEl.style.transform = 'translateY(-25%) scaleY(1)';
-                    canvasEl.style.transformOrigin = 'center center';
+                    video.style.clipPath = 'inset(50% 0 0 0)';
+                    video.style.transform = 'translateY(-25%) scaleY(1)';
+                    video.style.transformOrigin = 'center center';
                 } else {
-                    canvasEl.style.clipPath = 'none';
-                    canvasEl.style.transform = 'translateY(0) scaleY(1)';
+                    video.style.clipPath = 'none';
+                    video.style.transform = 'translateY(0) scaleY(1)';
                 }
             } else {
                 if (splitMode === 'top') {
-                    canvasEl.style.clipPath = 'none';
-                    canvasEl.style.transformOrigin = 'center top';
-                    canvasEl.style.transform = 'translateY(0) scaleY(2)';
+                    video.style.clipPath = 'none';
+                    video.style.transformOrigin = 'center top';
+                    video.style.transform = 'translateY(0) scaleY(2)';
                 } else if (splitMode === 'bottom') {
-                    canvasEl.style.clipPath = 'none';
-                    canvasEl.style.transformOrigin = 'center bottom';
-                    canvasEl.style.transform = 'translateY(0) scaleY(2)';
+                    video.style.clipPath = 'none';
+                    video.style.transformOrigin = 'center bottom';
+                    video.style.transform = 'translateY(0) scaleY(2)';
                 } else {
-                    canvasEl.style.clipPath = 'none';
-                    canvasEl.style.transformOrigin = 'center center';
-                    canvasEl.style.transform = 'translateY(0) scaleY(1)';
+                    video.style.clipPath = 'none';
+                    video.style.transformOrigin = 'center center';
+                    video.style.transform = 'translateY(0) scaleY(1)';
                 }
             }
         }
@@ -538,10 +512,12 @@
             if(splitMode === 'normal') splitMode = 'top';
             else if(splitMode === 'top') splitMode = 'bottom';
             else splitMode = 'normal';
+            
             document.getElementById('splitText').innerText = splitMode === 'top' ? langDict[currentLang].splitTop : (splitMode === 'bottom' ? langDict[currentLang].splitBot : langDict[currentLang].splitNorm);
             applyVideoStyle();
         }
 
+        // --- Edit Layout Logic ---
         function toggleEditMode() {
             isEditMode = true;
             closeMenu();
@@ -549,33 +525,46 @@
             document.getElementById('saveLayoutBtn').style.display = 'block';
             
             const handles = document.querySelectorAll('.drag-handle');
-            const groups = { 'handle-dpad': 'grp-dpad', 'handle-l': 'grp-l', 'handle-r': 'grp-r', 'handle-action': 'grp-action' };
+            const groups = {
+                'handle-dpad': 'grp-dpad', 
+                'handle-l': 'grp-l', 
+                'handle-r': 'grp-r', 
+                'handle-action': 'grp-action'
+            };
 
             handles.forEach(handle => {
                 handle.style.display = 'block';
                 const grp = document.getElementById(groups[handle.id]);
                 
+                // წერტილის საწყისი პოზიცია ემთხვევა ჯგუფის ცენტრს
                 handle.style.left = grp.style.left;
                 handle.style.top = grp.style.top;
+
                 let isDragging = false;
                 
                 handle.onpointerdown = (e) => {
                     isDragging = true;
                     handle.setPointerCapture(e.pointerId);
-                    handle.style.background = 'rgba(255, 87, 34, 0.9)'; 
+                    handle.style.background = 'rgba(255, 87, 34, 0.9)'; // დაჭერისას ფერს იცვლის სტაფილოსფრად
                 };
                 
                 handle.onpointermove = (e) => {
                     if(!isDragging) return;
-                    let w = window.innerWidth, h = window.innerHeight;
-                    let xPercent = e.clientX / w, yPercent = e.clientY / h;
                     
+                    let w = window.innerWidth;
+                    let h = window.innerHeight;
+                    let xPercent = e.clientX / w;
+                    let yPercent = e.clientY / h;
+                    
+                    // აახლებს მხოლოდ იმ ჯგუფის კოორდინატს, რომელსაც ეხები
                     if(handle.id === 'handle-dpad') dpadPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-action') actionPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-l') lPos = {x: xPercent, y: yPercent};
                     if(handle.id === 'handle-r') rPos = {x: xPercent, y: yPercent};
 
                     applyAndroidLayout(); 
+                    
+                    // წერტილი ზუსტად მიჰყვება განახლებულ ჯგუფს (კედელსაც რომ მიეჯახოს, აღარ გაცდება)
                     handle.style.left = grp.style.left;
                     handle.style.top = grp.style.top;
                 };
@@ -583,7 +572,7 @@
                 handle.onpointerup = (e) => { 
                     isDragging = false; 
                     handle.releasePointerCapture(e.pointerId); 
-                    handle.style.background = 'rgba(0, 188, 212, 0.7)'; 
+                    handle.style.background = 'rgba(0, 188, 212, 0.7)'; // უბრუნდება ძველ ფერს
                 };
             });
         }
