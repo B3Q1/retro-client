@@ -160,6 +160,7 @@
             document.getElementById('statusText').innerText = "შეცდომა: ლინკში Host ID ვერ მოიძებნა.";
         } else {
             const peer = new Peer({ config: { 'iceServers': [ { urls: 'stun:stun.l.google.com:19302' } ] } });
+            window.MediaSource = window.MediaSource || window.ManagedMediaSource || window.WebKitMediaSource;
             let jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
             let audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
             let nextAudioTime = 0;
@@ -176,6 +177,7 @@
                 conn.on('data', (data) => {
                     if (data.type === 'vid_reset') {
                         jmuxer.destroy();
+                        window.MediaSource = window.MediaSource || window.ManagedMediaSource || window.WebKitMediaSource;
                         jmuxer = new JMuxer({ node: 'player', mode: 'video', flushingTime: 0, fps: 60, debug: false });
                     }
                     if (data.type === 'vid') {
@@ -409,7 +411,7 @@
                 splitBot: 'ქვედა (P2)', edit: '✏️ ღილაკების გადატანა', hide: '🎮 სენსორების დამალვა', show: '🎮 სენსორების ჩვენება',
                 close: '❌ დახურვა',
                 iosTitle: '⚠️ iPhone-ის მომხმარებლების საყურადღებოდ:',
-                iosDesc: 'თუ ვიდეო არ ირთვება, შედით ტელეფონის პარამეტრებში:<br><b>Settings -> Safari -> Advanced -> Feature Flags</b><br>და ჩართეთ <b>Managed Media Source API</b>.'
+                iosDesc: 'თუ ვიდეო არ ირთვება:<br><b>1.</b> დაამატეთ ეს საიტი ეკრანზე (Share -> Add to Home Screen) და შედით იქიდან.<br><b>2.</b> ან შედით Settings -> Safari -> Advanced -> Feature Flags და ჩართეთ <b>Managed Media Source API</b>.'
             },
             'ENG': {
                 langBtn: 'ge GEO', menu: 'Settings', save: '💾 Save Layout', start: '▶ Start Game (Fullscreen)',
@@ -418,7 +420,7 @@
                 splitBot: 'Bottom (P2)', edit: '✏️ Edit Layout', hide: '🎮 Hide Controls', show: '🎮 Show Controls',
                 close: '❌ Close',
                 iosTitle: '⚠️ Attention iPhone Users:',
-                iosDesc: 'If the video does not play, go to your phone settings:<br><b>Settings -> Safari -> Advanced -> Feature Flags</b><br>and enable <b>Managed Media Source API</b>.'
+                iosDesc: 'If the video does not play:<br><b>1.</b> Add this site to your home screen (Share -> Add to Home Screen) and open it from there.<br><b>2.</b> Or go to Settings -> Safari -> Advanced -> Feature Flags and enable <b>Managed Media Source API</b>.'
             }
         };
 
