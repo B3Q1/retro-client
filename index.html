@@ -201,32 +201,51 @@
                         initDecoder();
                     }
                     if (data.type === 'vid') {
-                        if (!videoDecoder || videoDecoder.state !== 'configured') return;
+    if (!videoDecoder || videoDecoder.state !== 'configured') return;
 
-                        let binaryString = atob(data.data);
-                        let bytes = new Uint8Array(binaryString.length);
-                        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                        
-                        // ვარკვევთ არის თუ არა KeyFrame (I-Frame), რასაც WebCodecs ითხოვს პირველ კადრად
-                        let isKeyFrame = false;
-                        if (bytes.length > 4) {
-                            let nalType = bytes[4] & 0x1F;
-                            // 5 = IDR (KeyFrame), 7 = SPS (ხშირად KeyFrame-ს ახლავს)
-                            if (nalType === 5 || nalType === 7 || nalType === 8) isKeyFrame = true;
-                        }
+    let binaryString = atob(data.data);
+    let bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    
+    // --- H.264 Annex B მინი-პარსერი ---
+    let isKeyFrame = false;
+    
+    // ვსკანირებთ ბაიტებს Start Code-ის მოსაძებნად
+    for (let i = 0; i < bytes.length - 4; i++) {
+        if (bytes[i] === 0 && bytes[i+1] === 0) {
+            let offset = 0;
+            // ვამოწმებთ 3-ბაიტიან (00 00 01) და 4-ბაიტიან (00 00 00 01) სტარტ კოდებს
+            if (bytes[i+2] === 1) offset = 3;
+            else if (bytes[i+2] === 0 && bytes[i+3] === 1) offset = 4;
+            
+            if (offset > 0) {
+                // NAL-ის ტიპის ამოღება (ბოლო 5 ბიტი)
+                let nalType = bytes[i + offset] & 0x1F;
+                
+                // NAL 5 = IDR (მთავარი კადრი), 7 = SPS (პარამეტრები), 8 = PPS
+                if (nalType === 5 || nalType === 7 || nalType === 8) {
+                    isKeyFrame = true;
+                    break; // თუ ერთი მაინც ვიპოვეთ, ესე იგი KeyFrame-ია და ძებნას ვწყვეტთ
+                }
+                i += offset - 1; // ვახტებით ნაპოვნ კოდს, რომ დრო დავზოგოთ
+            }
+        }
+    }
 
-                        let chunk = new EncodedVideoChunk({
-                            type: isKeyFrame ? 'key' : 'delta',
-                            timestamp: performance.now() * 1000,
-                            data: bytes
-                        });
+    // ვქმნით ვიდეოს ჩანკს WebCodecs-ისთვის
+    let chunk = new EncodedVideoChunk({
+        type: isKeyFrame ? 'key' : 'delta',
+        timestamp: performance.now() * 1000,
+        data: bytes
+    });
 
-                        try {
-                            videoDecoder.decode(chunk);
-                        } catch(e) {
-                            // ზოგჯერ პირველი რამდენიმე კადრი შეიძლება ჩავარდეს, სანამ keyframe არ მოვა
-                        }
-                    }
+    try {
+        videoDecoder.decode(chunk);
+    } catch(e) {
+        // თავიდან შეიძლება რამდენიმე კადრი ჩავარდეს (სანამ პირველი KeyFrame არ მოვა)
+        console.warn("დეკოდირება ჩავარდა (ველოდებით KeyFrame-ს):", e.message);
+    }
+}
                     if (data.type === 'aud') {
                         if(audioCtx.state === 'suspended') return;
                         let binaryString = atob(data.data);
